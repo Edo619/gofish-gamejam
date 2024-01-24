@@ -15,6 +15,8 @@ public class GameController : MonoBehaviour
 
     public List<string> deck;
 
+    public List<string> opponentLevel2Memory;
+
     public Hand playerHand;
     public Hand opponentHand;
 
@@ -59,14 +61,17 @@ public class GameController : MonoBehaviour
 
     public void DrawCard(Hand hand, int count)
     {
-        for (int i = 0; i < count; i++)
+        if(deck.Count > 0)
         {
-            hand.cards.Add(deck[0]);
+            for (int i = 0; i < count; i++)
+            {
+                hand.cards.Add(deck[0]);
 
-            hand.ranks[RankToInt(GetRank(deck[0]))]++;
-            InstantiateCard(deck[0], hand);
+                hand.ranks[RankToInt(GetRank(deck[0]))]++;
+                InstantiateCard(deck[0], hand);
 
-            deck.RemoveAt(0);
+                deck.RemoveAt(0);
+            }
         }
     }
     public void DrawCard(Hand hand, string cardName)
@@ -88,6 +93,8 @@ public class GameController : MonoBehaviour
             GameObject button = EventSystem.current.currentSelectedGameObject;
             string rank = GetRank(button.name);
             Debug.Log("Player asked for " + rank);
+            if(!opponentLevel2Memory.Contains(rank))
+                opponentLevel2Memory.Add(rank);
             for (int i = 0; i < opponentHand.cards.Count; i++)
             {
                 if (GetRank(opponentHand.cards[i]) == rank)
@@ -152,6 +159,8 @@ public class GameController : MonoBehaviour
                     if (RankToInt(GetRank(hand.cards[t])) == i)
                     {
                         Debug.Log("Score " + hand.cards[t]);
+                        if (opponentLevel2Memory.Contains(GetRank(hand.cards[t])))
+                            opponentLevel2Memory.Remove(GetRank(hand.cards[t]));
                         hand.cards.RemoveAt(t);
                         hand.score++;
                         t--;
@@ -166,39 +175,12 @@ public class GameController : MonoBehaviour
                 }
             }
         }
-        /*Dictionary<string, int> ranks = new Dictionary<string, int>();
-
-        for (int i = 0; i < hand.cards.Count; i++)
-        {
-            if (ranks.ContainsKey(GetRank(hand.cards[i]))){
-                ranks[GetRank(hand.cards[i])]++;
-            }
-            else
-            {
-                ranks.Add(GetRank(hand.cards[i]), 1);
-            }
-        }
-        foreach (KeyValuePair<string,int> pair in ranks)
-        {
-            if(pair.Value == 4)
-            {
-                for (int i = 0; i < hand.cards.Count; i++)
-                {
-                    if (GetRank(hand.cards[i]) == pair.Key)
-                    {
-                        Debug.Log(hand.cards[i] + "Removed");
-                        DeInstantiateCard(hand.cards[i]);
-                        hand.cards.RemoveAt(i);
-                        hand.score++;
-                        i--;
-                    }
-                }
-            }
-        }*/
     }
 
     public void OpponentTurnLevel1()
     {
+        if (opponentHand.cards.Count == 0)
+            DrawCard(opponentHand, 1);
         bool hit = false;
         int rndCardId = Random.Range(0, opponentHand.cards.Count);
         Debug.Log("Opponent asked for: " + GetRank(opponentHand.cards[rndCardId]));
@@ -220,9 +202,9 @@ public class GameController : MonoBehaviour
         if(hit == false)
         {
             Debug.Log("Opponent goes fishing!");
-            DrawCard(opponentHand, 1);
-            Debug.Log("Opponent Drew " + opponentHand.cards[opponentHand.cards.Count-1]);
             string topCard = deck[0];
+            DrawCard(opponentHand, 1);
+            Debug.Log("Opponent Drew " + opponentHand.cards[opponentHand.cards.Count - 1]);
             if (GetRank(opponentHand.cards[opponentHand.cards.Count - 1]) == GetRank(topCard) && GetRank(opponentHand.cards[opponentHand.cards.Count - 1]) != GetRank(opponentHand.cards[rndCardId]))
                 playerTurn = true;
             else
@@ -234,6 +216,60 @@ public class GameController : MonoBehaviour
         else
         {
             OpponentTurnLevel1();
+        }
+    }
+    public void OpponentTurnLevel2()
+    {
+        if(opponentHand.cards.Count == 0)
+            DrawCard(opponentHand, 1);
+        int cardId = 0;
+        bool hit = false;
+        bool hasCardFromMemory = false;
+        for (int i = 0; i < opponentHand.cards.Count; i++)
+        {
+            if (opponentLevel2Memory.Contains(GetRank(opponentHand.cards[i])))
+            {
+                hasCardFromMemory = true;
+                opponentLevel2Memory.Remove(GetRank(opponentHand.cards[i]));
+                cardId = i;
+                break;
+            }
+        }
+        if (!hasCardFromMemory)
+            cardId = Random.Range(0, opponentHand.cards.Count);
+        Debug.Log("Opponent asked for: " + GetRank(opponentHand.cards[cardId]));
+        for (int i = 0; i < playerHand.cards.Count; i++)
+        {
+            if (GetRank(playerHand.cards[i]) == GetRank(opponentHand.cards[cardId]))
+            {
+                hit = true;
+                opponentHand.cards.Add(playerHand.cards[i]);
+                DeInstantiateCard(playerHand.cards[i]);
+                playerHand.ranks[RankToInt(GetRank(playerHand.cards[i]))]--;
+                opponentHand.ranks[RankToInt(GetRank(playerHand.cards[i]))]++;
+                InstantiateCard(playerHand.cards[i], opponentHand);
+                playerHand.cards.RemoveAt(i);
+                Debug.Log("Opponent got it!");
+                i--;
+            }
+        }
+        if (hit == false)
+        {
+            Debug.Log("Opponent goes fishing!");
+            string topCard = deck[0];
+            DrawCard(opponentHand, 1);
+            Debug.Log("Opponent Drew " + opponentHand.cards[opponentHand.cards.Count - 1]);
+            if (GetRank(opponentHand.cards[opponentHand.cards.Count - 1]) == GetRank(topCard) && GetRank(opponentHand.cards[opponentHand.cards.Count - 1]) != GetRank(opponentHand.cards[cardId]))
+                playerTurn = true;
+            else
+            {
+                Debug.Log("Opponent Catch");
+                OpponentTurnLevel2();
+            }
+        }
+        else
+        {
+            OpponentTurnLevel2();
         }
     }
 
@@ -287,9 +323,14 @@ public class GameController : MonoBehaviour
 
     void Update()
     {
-        if (playerTurn == false)
+        if(playerTurn)
         {
-            OpponentTurnLevel1();
+            if (playerHand.cards.Count == 0)
+                DrawCard(playerHand, 1);
+        }
+        else
+        {
+            OpponentTurnLevel2();
         }
     }
 }

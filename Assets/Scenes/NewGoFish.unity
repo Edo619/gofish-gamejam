@@ -500,7 +500,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &166543866
 RectTransform:
   m_ObjectHideFlags: 0
@@ -873,6 +873,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 34dde227825f0dd45b3bcba557e772bf, type: 3}
   - {fileID: 21300000, guid: c3953844984ac324db532ef350bab133, type: 3}
   deck: []
+  opponentLevel2Memory: []
   playerHand:
     cards: []
     handGroup: {fileID: 688362378}
